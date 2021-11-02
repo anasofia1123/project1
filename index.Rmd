@@ -1,3 +1,4 @@
+
 ---
 title: 'Project 1: Wrangling, Exploration, Visualization'
 author: "SDS322E"
@@ -19,15 +20,24 @@ tidy=TRUE, tidy.opts=list(width.cutoff=60), R.options=list(max.print=100))
 
 ## Data Wrangling, Exploration, Visualization
 
-### Name and EID here
+### Ana Sofia Santiago
 
 #### Introduction 
 
-Paragraph or two introducing your datasets and variables, why they are interesting to you, etc.
+My first data set is Austin weather trends. This data was obtained manually from weather.gov which provided csv datasets of daily data for each month within the Austin-Bergstrom area. I compiled the data sets from February to June of 2021 to create the austin_weather dataset. My second data set is my own personal netlix viewing history which I downloaded directly from netflix. I went in to the .csv file and manually entered the genre of whatever I was watching as well as if it was a movie or a tv show. 
+
+My main reasoning behind choosing these data sets were because I was interested in seeing whether climate possibly had an effect on what I was watching. 
 
 ```{R}
-# read your datasets in here, e.g., with read_csv()
+library(tidyverse)
+library(dplyr)
+library(cluster)
+library(ggplot2)
 
+weather <- read.csv(file.path("project1", "austin_weather.csv"))
+netflix <- read_csv(file.path("project1", "mynetflixviewinghistory.csv"))
+glimpse(weather)
+glimpse(netflix)
 ```
 
 #### Tidying: Reshaping
@@ -35,57 +45,145 @@ Paragraph or two introducing your datasets and variables, why they are interesti
 If your datasets are tidy already, demonstrate that you can reshape data with pivot wider/longer here (e.g., untidy and then retidy). Alternatively, it may be easier to wait until the wrangling section so you can reshape your summary statistics. Note here if you are going to do this.
 
 ```{R}
-# your tidying code (if applicable; can also wait until wrangling section)
-```
+library(tidyverse)
+library(lubridate)
 
-    
+merged_data$date <- as.Date(merged_data$date,
+                        format = "%m/%d/%y")
+class(merged_data$date)
+
+untidy_data <- merged_data %>% pivot_wider(names_from = type, values_from = precipitation)
+tidy_data <- untidy_data %>% pivot_longer(8:9,names_to = "type", values_to = "precipitation", values_drop_na = TRUE)
+```
+My data sets were already tidy when imported so I decided to reshape my data after wrangling. What you see before the untidy and tidy datasets is a function I used to transform my 'date' variable column from a character class into a 'Date' class to resemble calendar dates. Morevoer, to demonstrate my knowledge of reshaping data, I used pivot wider to untidy the data and then reshaped it to its original form using pivot longer. 
+
 #### Joining/Merging
 
 ```{R}
-# your joining code
+glimpse(weather)
+glimpse(netflix)
 
-# your joining code
+weather %>% summarize_all(n_distinct)
+netflix %>% summarize_all(n_distinct)
+``` 
+
+My weather data set had 150 rows and 6 columns which had the following variables: date, temp_max, temp_min, temp_avg, precipitation, and snow depth. My Netflix data set had 387 rows and 4 columns which had the following variables: title, date, type (movie or tv), and genre. From this, we can see that the only common variable is 'date'. Finding the distinct values, allows us to know more about the datasets. For example, there are 7 distinct genres that were watched. 
+
+```{R}
+merged_data_with_na <- weather %>% full_join(netflix) 
+glimpse(merged_data_with_na)
+merged_data <- weather %>% full_join(netflix) %>% na.omit()
+merged_data
+merged_data %>% summarize_all(n_distinct)
+
+#categorical frequency tables
+library("plyr")
+count(merged_data, 'genre')
+count(merged_data, 'type')
+
 ```
 
-Discussions of joining here. Feel encouraged to break up into more than once code chunk and discuss each in turn.
+I used "full_join" to merge join my data using 'date' as my common variable for both data sets. The joined data set had 448 rows and 9 columns. However, after using 'na.omit' to remove any NA variables, the final joined data set had 387 rows and 9 columns, as expected. The removal of these NA variables can be attributed to the fact that netflix was not watched every single day. The large amount of rows can be attributed to the 'title' variable since multiple shows were watched on given dates. I used count to generate frequency charts for two categorical variables.
 
 ####  Wrangling
 
 ```{R}
-# your wrangling code
+#filter and arrange
+merged_data %>% group_by(date) %>% filter(temp_avg >= 70) %>% summarise(n = n()) %>% arrange(desc(n))
+merged_data %>% group_by(date) %>% filter(temp_avg <= 70) %>% summarise(n = n()) %>% arrange(desc(n))
 
-# your wrangling code
+#select
+merged_data %>% arrange(desc(temp_avg)) %>% select(genre, temp_avg) %>% filter(temp_avg >= max(temp_avg))
 
-# your wrangling code
+#mutated 
+merged_data %>% mutate(merged_data, warmth = ifelse(temp_avg > 70, "warm", "cool"))
+merged_data %>% mutate(merged_data, rain = ifelse(precipitation > 0, "rain", "no rain"))
 ```
 
-Your discussion of wrangling section here. Feel encouraged to break up into more than once code chunk and discuss each in turn.
+Using the filter and arrange functions, I was able to see how many shows/movies I watched on warmer days (above 70 degrees) and on cooler days (below 70 degrees). There is definitely a trend! I watched way more shows and movies on warmer days, the highest amount watched being 22 in comparison to cooler days where the highest amount watched was 9!Going off of this, I used the select function to see what genre on the days with highest average temperature. Turns out that on hot days I would most likely be watching documentaries or reality TV. I also used the mutate function to create variables that would identify if it rained and it if it was a cool or a warm day. 
+
+```{R}
+#str regex
+titlewords <- pull(merged_data, title) %>% unlist
+titlewords2 <- as.data.frame(titlewords)
+titlewords2 %>% mutate(length = str_length(titlewords)) %>% arrange(-length)
+```
+To demonstrate my knowledge of stringr, I created a vector that pulled all my titles from my data set and used str_length to see which show/movie I watched had the longest title. The longest title I watched was 'Demon Slayer: Kimetsu no Yaiba: Tanjiro Kamado, Unwavering Resolve Arc: Swordsman Accompanying a Demon' and the shortest title I watched was 'Hush'. 
+
+```{R}
+#kable table
+summary1 <- summary(merged_data$temp_min)
+summary2 <- summary(merged_data$temp_avg)
+summary3 <- summary(merged_data$temp_max)
+summary4 <- summary(merged_data$precipitation)
+summary5 <- summary(merged_data$snow_depth)
+totalsummary <- bind_rows(summary1, summary2, summary3, summary4, summary5) 
+rownames(totalsummary) <- c("temp_min", "temp_avg", "temp_max", "precipitation", "snow_depth")
+kable(totalsummary, format = "html", table.attr = "style='width:70%;'")  %>% 
+  kableExtra::kable_styling() 
+
+#other summarize stats 
+merged_data %>% summarize_if(is.numeric, funs(var=var), na.rm = TRUE) %>% knitr::kable() %>% 
+  kableExtra::kable_styling() 
+merged_data %>% summarize_if(is.numeric, funs(sd=sd), na.rm = TRUE) %>% knitr::kable() %>% 
+  kableExtra::kable_styling() 
+merged_data %>% summarize_if(is.numeric, funs(median=median), na.rm = TRUE) %>% knitr::kable() %>%  kableExtra::kable_styling() 
+merged_data %>% summarize_if(is.numeric, funs(n_distinct), na.rm = TRUE) %>% knitr::kable() %>%  kableExtra::kable_styling() 
+merged_data %>% group_by(genre) %>% summarize(n = n()) %>%  knitr::kable() %>%  kableExtra::kable_styling() 
+merged_data %>% group_by(date,temp_avg) %>% summarize(mean_precipiatation = mean(precipitation, na.rm = TRUE), mean_temp = mean(temp_avg, na.rm = T), n = n()) %>% tail() %>% knitr::kable() %>%  kableExtra::kable_styling()
+
+```
+
+In this code chunk, I create a Summary Statistics table using 'kable'. Furthermore, I gather more summary statistics such as variance and standard deviation using the summarize_if to find the correlation, variance, and distinct variable amount of the numeric variables. The I grouped by genre and use the summarize function to find the number of distinct variables. I watched anime the most (117) and romance the least (1). Lastly, I used the group by function again but this time on avg. temperature and date along with tail() to see how I spent the last days of summer. Turns out even thoug it was warm out, there was a lot of rain so I watched a lot of netflix. On the rainiest day, with 0.78 inches of rain, I watched 10 things! 
 
 
 #### Visualizing
 
 ```{R}
-# your plot 1
+#plot1 
+library(ggplot2)
+ggplot(merged_data, aes(x=genre, y=temp_avg)) + 
+  geom_bar(aes(fill= type) ,stat="summary", width=.5, position = "dodge") + 
+  labs(title="Bar Chart", subtitle="Genre vs. Average Temperature") + 
+  theme(axis.text.x = element_text(angle=65, vjust=0.6)) + 
+  ylab("Avg. Temperature") + xlab("Genre")
 ```
-
-Your discussion of plot 1
+This bar chart demonstrates the average temperatures at which each genre was watched as well as what type. The genre that was watched at the lowest average temperatures was horror. The genre that was watched at the highest average temperatures was romance.
 
 ```{R}
-# your plot 2
+##plot 2
+library(ggplot2)
+ggplot(merged_data, aes(genre, date, colour = type)) + 
+  geom_point() + stat_smooth(aes(group = type), method = "lm")  + 
+  labs(title="Precipitation vs. Genre") + 
+  theme(axis.text.x = element_text(angle=50, vjust=0.7)) + 
+  ylab("Precipitation") + xlab("Genre")
 ```
 
-Your discussion of plot 2
+ This ggplot demonstrates which months I watched most genres as well as their types. The genre demonstrating least variation is romance which I only watched once in June. A close second isanime, which I watched mainly in May. The data set with the most variation is drama, which I watched from February to June. A close second is comedy which is watched from mid-February to mid-June. This plot also uses geom_point and stat_smooth to demonstrate trends. More specifically, we can see that I began watching more movies as April ended and May came around.
 
 ```{R}
-# your plot 3
+#plot3
+merged_data %>% mutate(rain = ifelse(precipitation > 1, "Rain", "No Rain")) %>% ggplot(aes(genre, 
+    temp_avg)) + geom_point(stat = "summary", fun = mean, 
+    aes(group = type, color = type)) + facet_wrap(~rain) + 
+    theme(legend.position = "bottom")+ theme(axis.text.x = element_text(angle=50, vjust=0.7)) + labs(title = "Genre and Type of Streaming by Precipitation and Temperature", 
+    x = "Genres Watched", y = "Temperature (ºF)") 
 ```
+This scatter plot with a facet wrap is derived from a variable we created using mutate to differentiate the days in which it rained and which it did not. This plot indicated that on days that it rained, I watched anime, comedy, drama, and reality tv. I also watched more tv than movies when it rained. On the other hand, when it didn't rain I watched moth movies and tv as well as every genre. 
 
-Your discussion of plot 3
+```{R}
+#plot4
+g <- ggplot(merged_data, aes(genre, temp_avg))
+g + geom_boxplot(varwidth=T, fill="purple") +
+  theme(axis.text.x = element_text(angle=65, vjust=0.6)) + 
+    labs(title="Box plot", 
+         subtitle="Average Temperature by Genre",
+         x="Genre",
+         y="Average Temperature (ºF)")
+```
+I created this final bar plot to see in which genres lied outliers. It can be seen that there are outliers in the genres comedy, horror, and romance. Romance does not have a representation of distribution because it was only watched once. The genre watched with the least variation in temperature was horror and the the one with the most variation in temperature was reality tv.
 
 #### Concluding Remarks
 
-If any!
-
-
-
-
+Through this project, I was challenged to test my knowledge of wrangling and data exploration. By using my own personal data, I was able to see patterns in the way I stream netflix in conjuction with the weather outside. It was very interesting! Thank you! 
