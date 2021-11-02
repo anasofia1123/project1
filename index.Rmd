@@ -34,8 +34,8 @@ library(dplyr)
 library(cluster)
 library(ggplot2)
 
-weather <- read.csv(file.path("project1", "austin_weather.csv"))
-netflix <- read_csv(file.path("project1", "mynetflixviewinghistory.csv"))
+weather <- read_csv("~/project1/austin_weather.csv")
+netflix <- read_csv("~/project1/mynetflixviewinghistory.csv")
 glimpse(weather)
 glimpse(netflix)
 ```
