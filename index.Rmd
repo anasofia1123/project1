@@ -40,23 +40,6 @@ glimpse(weather)
 glimpse(netflix)
 ```
 
-#### Tidying: Reshaping
-
-If your datasets are tidy already, demonstrate that you can reshape data with pivot wider/longer here (e.g., untidy and then retidy). Alternatively, it may be easier to wait until the wrangling section so you can reshape your summary statistics. Note here if you are going to do this.
-
-```{R}
-library(tidyverse)
-library(lubridate)
-
-merged_data$date <- as.Date(merged_data$date,
-                        format = "%m/%d/%y")
-class(merged_data$date)
-
-untidy_data <- merged_data %>% pivot_wider(names_from = type, values_from = precipitation)
-tidy_data <- untidy_data %>% pivot_longer(8:9,names_to = "type", values_to = "precipitation", values_drop_na = TRUE)
-```
-My data sets were already tidy when imported so I decided to reshape my data after wrangling. What you see before the untidy and tidy datasets is a function I used to transform my 'date' variable column from a character class into a 'Date' class to resemble calendar dates. Morevoer, to demonstrate my knowledge of reshaping data, I used pivot wider to untidy the data and then reshaped it to its original form using pivot longer. 
-
 #### Joining/Merging
 
 ```{R}
@@ -77,7 +60,7 @@ merged_data
 merged_data %>% summarize_all(n_distinct)
 
 #categorical frequency tables
-library("plyr")
+
 count(merged_data, 'genre')
 count(merged_data, 'type')
 
@@ -88,9 +71,10 @@ I used "full_join" to merge join my data using 'date' as my common variable for 
 ####  Wrangling
 
 ```{R}
+library(dplyr)
 #filter and arrange
-merged_data %>% group_by(date) %>% filter(temp_avg >= 70) %>% summarise(n = n()) %>% arrange(desc(n))
-merged_data %>% group_by(date) %>% filter(temp_avg <= 70) %>% summarise(n = n()) %>% arrange(desc(n))
+merged_data %>% group_by(date) %>% filter(temp_avg >= 70) %>% dplyr::summarize(n = n()) %>% arrange(desc(n))
+merged_data %>% group_by(date) %>% filter(temp_avg <= 70) %>% dplyr::summarize(n = n()) %>% arrange(desc(n))
 
 #select
 merged_data %>% arrange(desc(temp_avg)) %>% select(genre, temp_avg) %>% filter(temp_avg >= max(temp_avg))
@@ -111,6 +95,7 @@ titlewords2 %>% mutate(length = str_length(titlewords)) %>% arrange(-length)
 To demonstrate my knowledge of stringr, I created a vector that pulled all my titles from my data set and used str_length to see which show/movie I watched had the longest title. The longest title I watched was 'Demon Slayer: Kimetsu no Yaiba: Tanjiro Kamado, Unwavering Resolve Arc: Swordsman Accompanying a Demon' and the shortest title I watched was 'Hush'. 
 
 ```{R}
+library(knitr)
 #kable table
 summary1 <- summary(merged_data$temp_min)
 summary2 <- summary(merged_data$temp_avg)
@@ -119,7 +104,7 @@ summary4 <- summary(merged_data$precipitation)
 summary5 <- summary(merged_data$snow_depth)
 totalsummary <- bind_rows(summary1, summary2, summary3, summary4, summary5) 
 rownames(totalsummary) <- c("temp_min", "temp_avg", "temp_max", "precipitation", "snow_depth")
-kable(totalsummary, format = "html", table.attr = "style='width:70%;'")  %>% 
+knitr::kable(totalsummary, format = "html", table.attr = "style='width:70%;'")  %>% 
   kableExtra::kable_styling() 
 
 #other summarize stats 
@@ -129,13 +114,29 @@ merged_data %>% summarize_if(is.numeric, funs(sd=sd), na.rm = TRUE) %>% knitr::k
   kableExtra::kable_styling() 
 merged_data %>% summarize_if(is.numeric, funs(median=median), na.rm = TRUE) %>% knitr::kable() %>%  kableExtra::kable_styling() 
 merged_data %>% summarize_if(is.numeric, funs(n_distinct), na.rm = TRUE) %>% knitr::kable() %>%  kableExtra::kable_styling() 
-merged_data %>% group_by(genre) %>% summarize(n = n()) %>%  knitr::kable() %>%  kableExtra::kable_styling() 
-merged_data %>% group_by(date,temp_avg) %>% summarize(mean_precipiatation = mean(precipitation, na.rm = TRUE), mean_temp = mean(temp_avg, na.rm = T), n = n()) %>% tail() %>% knitr::kable() %>%  kableExtra::kable_styling()
+merged_data %>% group_by(genre) %>% dplyr::summarize(n = n()) %>%  knitr::kable() %>%  kableExtra::kable_styling() 
+merged_data %>% group_by(date,temp_avg) %>% dplyr::summarize(mean_precipiatation = mean(precipitation, na.rm = TRUE), mean_temp = mean(temp_avg, na.rm = T), n = n()) %>% tail() %>% knitr::kable() %>%  kableExtra::kable_styling()
 
 ```
 
 In this code chunk, I create a Summary Statistics table using 'kable'. Furthermore, I gather more summary statistics such as variance and standard deviation using the summarize_if to find the correlation, variance, and distinct variable amount of the numeric variables. The I grouped by genre and use the summarize function to find the number of distinct variables. I watched anime the most (117) and romance the least (1). Lastly, I used the group by function again but this time on avg. temperature and date along with tail() to see how I spent the last days of summer. Turns out even thoug it was warm out, there was a lot of rain so I watched a lot of netflix. On the rainiest day, with 0.78 inches of rain, I watched 10 things! 
 
+#### Tidying: Reshaping
+
+If your datasets are tidy already, demonstrate that you can reshape data with pivot wider/longer here (e.g., untidy and then retidy). Alternatively, it may be easier to wait until the wrangling section so you can reshape your summary statistics. Note here if you are going to do this.
+
+```{R}
+library(tidyverse)
+library(lubridate)
+
+merged_data$date <- as.Date(merged_data$date,
+                        format = "%m/%d/%y")
+class(merged_data$date)
+
+untidy_data <- merged_data %>% pivot_wider(names_from = type, values_from = precipitation)
+tidy_data <- untidy_data %>% pivot_longer(8:9,names_to = "type", values_to = "precipitation", values_drop_na = TRUE)
+```
+My data sets were already tidy when imported so I decided to reshape my data after wrangling. What you see before the untidy and tidy datasets is a function I used to transform my 'date' variable column from a character class into a 'Date' class to resemble calendar dates. Morevoer, to demonstrate my knowledge of reshaping data, I used pivot wider to untidy the data and then reshaped it to its original form using pivot longer. 
 
 #### Visualizing
 
